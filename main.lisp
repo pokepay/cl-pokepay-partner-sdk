@@ -1,7 +1,10 @@
 (defpackage #:cl-pokepay-partner-sdk/main
+  (:nicknames #:cl-pokepay-partner-sdk)
   (:use #:cl
         #:cl-pokepay-partner-sdk/crypto)
-  (:local-nicknames (:jzon :com.inuoe.jzon)))
+  (:local-nicknames (:jzon :com.inuoe.jzon))
+  (:export #:client
+           #:request))
 (in-package #:cl-pokepay-partner-sdk/main)
 
 (eval-when (:compile-toplevel :load-toplevel :execute)
@@ -31,13 +34,15 @@
 
 (defun construct-content (client-id key request-data)
   (jzon:stringify
-   `(("partner_client_id" . ,client-id)
-     ("data" . ,(aes256-encode-with-base64-url
-                 (jzon:stringify
-                  `(("request_data" . ,(jzon:parse request-data))
-                    ("timestamp" . ,(now-timestring))
-                    ("partner_call_id" . ,(random-uuid))))
-                 key)))))
+   (alexandria:alist-hash-table
+    `(("partner_client_id" . ,client-id)
+      ("data" . ,(aes256-encode-with-base64-url
+                  (jzon:stringify
+                   (alexandria:alist-hash-table
+                    `(("request_data" . ,(jzon:parse request-data))
+                      ("timestamp" . ,(now-timestring))
+                      ("partner_call_id" . ,(random-uuid)))))
+                  key))))))
 
 (defmethod request ((client client) method path request-data)
   (check-type method request-method)
